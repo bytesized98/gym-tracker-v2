@@ -7,7 +7,7 @@ import path from "path";
 // GitHub Pages serves the repo at https://<username>.github.io/<repo-name>/
 // so Vite's asset paths must be prefixed with that same base path.
 export default defineConfig({
-  base: "/lift-log/",
+  base: "/gym-tracker-v2/",
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src")
