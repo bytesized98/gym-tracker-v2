@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Doughnut } from "react-chartjs-2";
 import type { Workout } from "@/lib/types";
-import { vol, workoutColor } from "@/lib/types";
+import { vol, workoutColor, chartTheme } from "@/lib/types";
 
 interface Props {
   workouts: Workout[];
@@ -64,6 +64,9 @@ export default function MuscleBreakdown({ workouts }: Props) {
       ) : (
         <div className="flex items-center gap-4">
           <div className="h-[110px] w-[110px] flex-shrink-0">
+            {(() => {
+              const ct = chartTheme();
+              return (
             <Doughnut
               data={{
                 labels: totals.map((t) => t.name),
@@ -82,10 +85,10 @@ export default function MuscleBreakdown({ workouts }: Props) {
                 plugins: {
                   legend: { display: false },
                   tooltip: {
-                    backgroundColor: "#1c1c1c",
-                    borderColor: "#333",
+                    backgroundColor: ct.tooltipBg,
+                    borderColor: ct.tooltipBorder,
                     borderWidth: 1,
-                    bodyColor: "#eee",
+                    bodyColor: ct.tooltipText,
                     padding: 8,
                     callbacks: {
                       label: (c) => `${c.label}: ${Math.round(c.parsed).toLocaleString()} lbs vol`
@@ -94,6 +97,8 @@ export default function MuscleBreakdown({ workouts }: Props) {
                 }
               }}
             />
+              );
+            })()}
           </div>
           <div className="flex min-w-0 flex-1 flex-col gap-2">
             {totals.map((t) => {

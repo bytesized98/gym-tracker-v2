@@ -4,13 +4,37 @@ export default {
   theme: {
     extend: {
       colors: {
-        bg: "#080808",
-        surface: { DEFAULT: "#111111", 2: "#181818", 3: "#202020", 4: "#282828" },
-        line: { DEFAULT: "rgba(255,255,255,0.06)", 2: "rgba(255,255,255,0.11)", 3: "rgba(255,255,255,0.18)" },
-        ink: { DEFAULT: "#EFEFEF", 2: "#999999", 3: "#555555", 4: "#333333" },
-        accent: { DEFAULT: "#22C880", bg: "rgba(34,200,128,0.08)", border: "rgba(34,200,128,0.22)" },
-        danger: { DEFAULT: "#FF5A52", bg: "rgba(255,90,82,0.08)" },
-        warn: { DEFAULT: "#F5C842", bg: "rgba(245,200,66,0.08)" }
+        bg: "rgb(var(--bg) / <alpha-value>)",
+        surface: {
+          DEFAULT: "rgb(var(--surface) / <alpha-value>)",
+          2: "rgb(var(--surface-2) / <alpha-value>)",
+          3: "rgb(var(--surface-3) / <alpha-value>)",
+          4: "rgb(var(--surface-4) / <alpha-value>)"
+        },
+        line: {
+          DEFAULT: "var(--line)",
+          2: "var(--line-2)",
+          3: "var(--line-3)"
+        },
+        ink: {
+          DEFAULT: "rgb(var(--ink) / <alpha-value>)",
+          2: "rgb(var(--ink-2) / <alpha-value>)",
+          3: "rgb(var(--ink-3) / <alpha-value>)",
+          4: "rgb(var(--ink-4) / <alpha-value>)"
+        },
+        accent: {
+          DEFAULT: "rgb(var(--accent) / <alpha-value>)",
+          bg: "var(--accent-bg)",
+          border: "var(--accent-border)"
+        },
+        danger: {
+          DEFAULT: "rgb(var(--danger) / <alpha-value>)",
+          bg: "var(--danger-bg)"
+        },
+        warn: {
+          DEFAULT: "rgb(var(--warn) / <alpha-value>)",
+          bg: "var(--warn-bg)"
+        }
       },
       borderRadius: {
         card: "14px",

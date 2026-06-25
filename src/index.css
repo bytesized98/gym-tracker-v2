@@ -2,6 +2,53 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Plum & Coral theme ──────────────────────────────────────────────────────
+   Neutrals (backgrounds, surfaces, text, lines) flip between light and dark
+   based on the system's color scheme preference. Brand colors (accent/coral,
+   danger, warn) stay constant across both themes — only the canvas around
+   them changes, which keeps the app feeling consistent either way. */
+:root {
+  /* Neutrals — light mode (default) */
+  --bg: 250 246 248;
+  --surface: 255 255 255;
+  --surface-2: 243 236 241;
+  --surface-3: 236 227 234;
+  --surface-4: 226 214 223;
+  --line: rgba(20, 10, 20, 0.08);
+  --line-2: rgba(20, 10, 20, 0.14);
+  --line-3: rgba(20, 10, 20, 0.22);
+  --ink: 34 26 38;
+  --ink-2: 107 94 112;
+  --ink-3: 156 143 161;
+  --ink-4: 199 187 204;
+
+  /* Brand — constant across themes */
+  --accent: 232 131 107;
+  --accent-bg: rgba(232, 131, 107, 0.14);
+  --accent-border: rgba(232, 131, 107, 0.38);
+  --danger: 214 69 63;
+  --danger-bg: rgba(214, 69, 63, 0.1);
+  --warn: 201 138 53;
+  --warn-bg: rgba(201, 138, 53, 0.12);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: 24 20 32;
+    --surface: 32 26 41;
+    --surface-2: 40 31 51;
+    --surface-3: 49 39 62;
+    --surface-4: 59 47 74;
+    --line: rgba(255, 255, 255, 0.07);
+    --line-2: rgba(255, 255, 255, 0.12);
+    --line-3: rgba(255, 255, 255, 0.2);
+    --ink: 241 236 244;
+    --ink-2: 182 169 188;
+    --ink-3: 124 111 132;
+    --ink-4: 78 68 88;
+  }
+}
+
 html, body, #root {
   height: 100%;
   height: 100dvh;
@@ -15,4 +62,16 @@ body {
 ::-webkit-scrollbar {
   width: 0;
   height: 0;
+}
+
+/* Remove the up/down stepper arrows on number inputs across the app —
+   weight/reps/sets fields look cleaner as plain numeric text fields. */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
 }

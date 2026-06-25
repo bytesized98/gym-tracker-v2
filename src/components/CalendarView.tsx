@@ -1,9 +1,11 @@
 import { useMemo, useState } from "react";
-import type { Workout } from "@/lib/types";
+import type { Entry, Workout } from "@/lib/types";
 import { todayISO, workoutColor } from "@/lib/types";
+import EntryRow from "./EntryRow";
 
 interface Props {
   workouts: Workout[];
+  onUpdated: () => void;
 }
 
 const MN = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -14,12 +16,10 @@ interface DayEntry {
   workoutName: string;
   color: string;
   exName: string;
-  weight: number;
-  reps: number;
-  sets: number;
+  entry: Entry;
 }
 
-export default function CalendarView({ workouts }: Props) {
+export default function CalendarView({ workouts, onUpdated }: Props) {
   const [monthOffset, setMonthOffset] = useState(0);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
@@ -39,15 +39,7 @@ export default function CalendarView({ workouts }: Props) {
       (w.exercises ?? []).forEach((ex) => {
         (ex.entries ?? []).forEach((e) => {
           if (!map[e.date]) map[e.date] = [];
-          map[e.date].push({
-            workoutId: w.id,
-            workoutName: w.name,
-            color,
-            exName: ex.name,
-            weight: e.weight,
-            reps: e.reps,
-            sets: e.sets
-          });
+          map[e.date].push({ workoutId: w.id, workoutName: w.name, color, exName: ex.name, entry: e });
         });
       });
     });
@@ -56,10 +48,10 @@ export default function CalendarView({ workouts }: Props) {
 
   const selectedEntries = selectedDate ? entriesByDate[selectedDate] ?? [] : [];
   const groupedSelected = useMemo(() => {
-    const groups: Record<string, { name: string; color: string; exs: DayEntry[] }> = {};
+    const groups: Record<string, { name: string; color: string; items: DayEntry[] }> = {};
     selectedEntries.forEach((e) => {
-      if (!groups[e.workoutId]) groups[e.workoutId] = { name: e.workoutName, color: e.color, exs: [] };
-      groups[e.workoutId].exs.push(e);
+      if (!groups[e.workoutId]) groups[e.workoutId] = { name: e.workoutName, color: e.color, items: [] };
+      groups[e.workoutId].items.push(e);
     });
     return Object.values(groups);
   }, [selectedEntries]);
@@ -111,11 +103,13 @@ export default function CalendarView({ workouts }: Props) {
           });
           const isToday = cell.dateIso === todayIso;
           const isSelected = cell.dateIso === selectedDate;
+          const uniqueNames = Array.from(new Set(dots.map((d) => d.workoutName)));
+          const label = uniqueNames.length === 0 ? "" : uniqueNames.length === 1 ? uniqueNames[0] : `${uniqueNames.length} workouts`;
           return (
             <button
               key={i}
               onClick={() => setSelectedDate(cell.dateIso)}
-              className={`flex aspect-square flex-col items-center justify-center gap-0.5 rounded-md2 border ${
+              className={`flex aspect-square flex-col items-center justify-center gap-0.5 overflow-hidden rounded-md2 border px-0.5 ${
                 isSelected ? "border-accent-border bg-accent-bg" : isToday ? "border-accent" : "border-line bg-surface"
               }`}
             >
@@ -126,6 +120,9 @@ export default function CalendarView({ workouts }: Props) {
                     <div key={di} className="h-1.5 w-1.5 rounded-full" style={{ background: d.color }} />
                   ))}
                 </div>
+              )}
+              {label && (
+                <div className="w-full truncate px-0.5 text-center text-[7px] leading-tight text-ink-3">{label}</div>
               )}
             </button>
           );
@@ -149,13 +146,14 @@ export default function CalendarView({ workouts }: Props) {
                   <span className="h-2 w-2 rounded-full" style={{ background: g.color }} />
                   {g.name}
                 </div>
-                {g.exs.map((e, ei) => (
-                  <div key={ei} className="mb-1 flex justify-between rounded-md2 bg-surface-2 px-2.5 py-1.5 text-xs text-ink-2">
-                    <span>{e.exName}</span>
-                    <span>
-                      {e.weight} lbs × {e.reps} × {e.sets}
-                    </span>
-                  </div>
+                {g.items.map((item) => (
+                  <EntryRow
+                    key={item.entry.id}
+                    entry={item.entry}
+                    variant="detailed"
+                    exerciseName={item.exName}
+                    onUpdated={onUpdated}
+                  />
                 ))}
               </div>
             ))

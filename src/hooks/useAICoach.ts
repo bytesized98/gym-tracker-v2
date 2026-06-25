@@ -9,20 +9,37 @@ export interface ChatMessage {
 export function useAICoach() {
   const [sending, setSending] = useState(false);
 
-  /** Calls the ai-coach Edge Function. The user's JWT is attached automatically
-   *  by supabase-js, which the function uses server-side to fetch their own
-   *  workout data and to call Gemini with a key that never reaches the browser. */
+  /** Calls the ai-coach Edge Function directly via fetch (bypassing
+   *  supabase-js's functions.invoke, which was constructing a URL that
+   *  the browser couldn't reach even though the function itself is live —
+   *  confirmed working via curl against this exact URL pattern). */
   async function ask(messages: ChatMessage[], mode: "chat" | "auto_analysis" = "chat") {
     setSending(true);
     try {
-      const { data, error } = await supabase.functions.invoke("ai-coach", {
-        body: { messages, mode }
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !sessionData.session) {
+        throw new Error("Not signed in — please refresh and sign in again.");
+      }
+
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-coach`;
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${sessionData.session.access_token}`
+        },
+        body: JSON.stringify({ messages, mode })
       });
-      if (error) throw error;
-      return (data?.reply as string) ?? "Sorry, I couldn't get a response.";
+
+      const body = await res.json().catch(() => ({}) as any);
+      if (!res.ok) {
+        throw new Error(body?.error || `Request failed (${res.status})`);
+      }
+      return (body?.reply as string) ?? "Sorry, I couldn't get a response.";
     } catch (err) {
       console.error(err);
-      return "Connection error. Make sure you're online and try again.";
+      const message = err instanceof Error ? err.message : "Unknown error";
+      return `Error: ${message}`;
     } finally {
       setSending(false);
     }

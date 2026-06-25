@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useWorkouts } from "@/hooks/useWorkouts";
 import MuscleBreakdown from "./MuscleBreakdown";
 import CalendarView from "./CalendarView";
+import EntryRow from "./EntryRow";
 
 interface Props {
   userId: string;
@@ -10,7 +11,7 @@ interface Props {
 type ViewMode = "list" | "calendar";
 
 export default function HistoryTab({ userId }: Props) {
-  const { workouts } = useWorkouts(userId);
+  const { workouts, refresh } = useWorkouts(userId);
   const [filterId, setFilterId] = useState<string | null>(null);
   const [view, setView] = useState<ViewMode>("list");
 
@@ -38,7 +39,7 @@ export default function HistoryTab({ userId }: Props) {
       <MuscleBreakdown workouts={workouts} />
 
       {view === "calendar" ? (
-        <CalendarView workouts={workouts} />
+        <CalendarView workouts={workouts} onUpdated={refresh} />
       ) : (
         <>
           <div className="mb-4 flex gap-2 overflow-x-auto px-4">
@@ -73,35 +74,9 @@ export default function HistoryTab({ userId }: Props) {
                   return (
                     <div key={ex.id} className="mb-3.5">
                       <div className="mb-1.5 text-xs font-semibold text-ink-2">{ex.name}</div>
-                      {entries.map((e, idx) => {
-                        const prevEntry = entries[idx + 1];
-                        const dw = prevEntry ? e.weight - prevEntry.weight : 0;
-                        return (
-                          <div
-                            key={e.id}
-                            className="mb-1.5 flex items-center gap-2.5 rounded-md2 border border-line bg-surface px-3 py-2.5"
-                          >
-                            <div className="w-11 flex-shrink-0 text-[11px] text-ink-3">{e.date.slice(5)}</div>
-                            <div className="flex flex-1 gap-2.5 text-[13px] font-semibold tabular-nums">
-                              <span>
-                                {e.weight}
-                                <span className="block text-[10px] font-normal text-ink-3">lbs</span>
-                              </span>
-                              <span>
-                                {e.reps}
-                                <span className="block text-[10px] font-normal text-ink-3">reps</span>
-                              </span>
-                              <span>
-                                {e.sets}
-                                <span className="block text-[10px] font-normal text-ink-3">sets</span>
-                              </span>
-                            </div>
-                            <div className={`text-xs font-semibold ${dw > 0 ? "text-accent" : dw < 0 ? "text-danger" : "text-ink-3"}`}>
-                              {!prevEntry ? "first" : dw !== 0 ? `${dw > 0 ? "+" : ""}${dw} lbs` : "—"}
-                            </div>
-                          </div>
-                        );
-                      })}
+                      {entries.map((e, idx) => (
+                        <EntryRow key={e.id} entry={e} prevEntry={entries[idx + 1]} onUpdated={refresh} />
+                      ))}
                     </div>
                   );
                 })}

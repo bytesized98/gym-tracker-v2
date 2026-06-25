@@ -28,6 +28,16 @@ const TABS = [
         <path d="M12 16v-4M12 8h.01" />
       </>
     )
+  },
+  {
+    id: "profile",
+    label: "Profile",
+    icon: (
+      <>
+        <circle cx="12" cy="8" r="4" />
+        <path d="M4 21c0-4 3.5-7 8-7s8 3 8 7" />
+      </>
+    )
   }
 ];
 

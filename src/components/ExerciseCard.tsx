@@ -1,13 +1,14 @@
 import { useMemo, useState } from "react";
 import { Line } from "react-chartjs-2";
 import type { Exercise } from "@/lib/types";
-import { computeStagnation } from "@/lib/types";
+import { computeStagnation, chartTheme } from "@/lib/types";
 import { useEntries } from "@/hooks/useEntries";
+import EntryRow from "./EntryRow";
 
 interface Props {
   exercise: Exercise;
   onSaved: () => void;
-  onRemove: (exerciseId: string) => void;
+  onSkip: (exerciseId: string) => void;
 }
 
 function daysAgo(dateIso: string): string {
@@ -20,7 +21,7 @@ function daysAgo(dateIso: string): string {
   return `${diff} days ago`;
 }
 
-export default function ExerciseCard({ exercise, onSaved, onRemove }: Props) {
+export default function ExerciseCard({ exercise, onSaved, onSkip }: Props) {
   const { saveEntry, getBaseline, getTodayEntry } = useEntries();
   const entries = exercise.entries ?? [];
   const baseline = getBaseline(entries);
@@ -38,6 +39,11 @@ export default function ExerciseCard({ exercise, onSaved, onRemove }: Props) {
   const r = parseInt(reps) || 0;
   const s = parseInt(sets) || 0;
 
+  const isLogged = !!today;
+  // Dirty = either nothing saved yet (brand new), or values differ from what's saved.
+  const isDirty = !isLogged || w !== today?.weight || r !== today?.reps || s !== today?.sets;
+  const isValid = w > 0 && r > 0 && s > 0;
+
   const trend = useMemo(() => {
     if (!baseline || !w || !r || !s) return null;
     const dw = w - baseline.weight;
@@ -52,7 +58,7 @@ export default function ExerciseCard({ exercise, onSaved, onRemove }: Props) {
   }, [baseline, w, r, s]);
 
   async function handleSave() {
-    if (!w || !r || !s) return;
+    if (!isValid || !isDirty) return;
     setSaving(true);
     try {
       await saveEntry(exercise.id, w, r, s);
@@ -62,8 +68,8 @@ export default function ExerciseCard({ exercise, onSaved, onRemove }: Props) {
     }
   }
 
-  const isLogged = !!today;
   const isStagnant = stagnation.status === "stagnant";
+  const sortedEntries = [...entries].sort((a, b) => (a.date < b.date ? 1 : -1));
 
   return (
     <div
@@ -94,10 +100,11 @@ export default function ExerciseCard({ exercise, onSaved, onRemove }: Props) {
           </button>
           <button
             onClick={() => setConfirmRemove(true)}
+            title="Skip for today"
             className="flex h-7 w-7 items-center justify-center rounded-md2 border border-line-2 bg-surface-2"
           >
-            <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 stroke-ink-3" fill="none" strokeWidth={1.8} strokeLinecap="round">
-              <path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0l-1 14a2 2 0 01-2 2H7a2 2 0 01-2-2L4 6" />
+            <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 stroke-ink-3" fill="none" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+              <path d="M17.94 17.94A10.94 10.94 0 0112 20c-7 0-10-8-10-8a18.5 18.5 0 015.06-5.94M9.9 4.24A10.94 10.94 0 0112 4c7 0 10 8 10 8a18.5 18.5 0 01-2.16 3.19M14.12 14.12a3 3 0 11-4.24-4.24M1 1l22 22" />
             </svg>
           </button>
         </div>
@@ -106,7 +113,7 @@ export default function ExerciseCard({ exercise, onSaved, onRemove }: Props) {
       {confirmRemove && (
         <div className="m-3.5 flex flex-col gap-2 rounded-md2 border border-danger/25 bg-danger-bg p-3">
           <p className="text-xs text-ink-2">
-            Remove "{exercise.name}"? Past data stays saved but hidden.
+            Skip "{exercise.name}" for today? It stays in this bucket and will reappear next time.
           </p>
           <div className="flex gap-2">
             <button
@@ -116,10 +123,13 @@ export default function ExerciseCard({ exercise, onSaved, onRemove }: Props) {
               Cancel
             </button>
             <button
-              onClick={() => onRemove(exercise.id)}
+              onClick={() => {
+                onSkip(exercise.id);
+                setConfirmRemove(false);
+              }}
               className="flex-1 rounded-md2 bg-danger py-2 text-xs font-bold text-black"
             >
-              Remove
+              Skip for today
             </button>
           </div>
         </div>
@@ -176,23 +186,27 @@ export default function ExerciseCard({ exercise, onSaved, onRemove }: Props) {
       </div>
 
       <div className="flex items-center justify-between px-3.5 pb-3.5">
-        <span className={`text-xs text-accent transition-opacity ${isLogged ? "opacity-100" : "opacity-0"}`}>✓ Saved</span>
+        <span className={`text-xs text-accent transition-opacity ${isLogged && !isDirty ? "opacity-100" : "opacity-0"}`}>
+          ✓ Saved
+        </span>
         <button
           onClick={handleSave}
-          disabled={saving}
-          className={`rounded-md2 px-6 py-2.5 text-[13px] font-bold ${
-            isLogged ? "border border-line-2 bg-surface-3 text-ink-2" : "bg-accent text-black"
+          disabled={!isValid || !isDirty || saving}
+          className={`rounded-md2 px-6 py-2.5 text-[13px] font-bold transition-colors ${
+            isValid && isDirty ? "bg-accent text-black" : "border border-line-2 bg-surface-3 text-ink-3"
           }`}
         >
-          {isLogged ? "Update" : "Save"}
+          {saving ? "Saving..." : isLogged ? "Update" : "Save"}
         </button>
       </div>
 
       {showHistory && (
         <div className="flex flex-col gap-2.5 border-t border-line p-3.5">
-          <div className="text-[11px] uppercase tracking-wide text-ink-3">All recorded sessions</div>
+          <div className="text-[11px] uppercase tracking-wide text-ink-3">All recorded sessions — tap any to edit</div>
 
-          {entries.length > 0 && (
+          {entries.length > 0 && (() => {
+            const ct = chartTheme();
+            return (
             <div className="h-[110px]">
               <Line
                 data={{
@@ -200,9 +214,9 @@ export default function ExerciseCard({ exercise, onSaved, onRemove }: Props) {
                   datasets: [
                     {
                       data: [...entries].sort((a, b) => (a.date < b.date ? -1 : 1)).map((e) => e.weight),
-                      borderColor: "#22C880",
-                      backgroundColor: "rgba(34,200,128,.06)",
-                      pointBackgroundColor: "#22C880",
+                      borderColor: ct.accent,
+                      backgroundColor: "rgba(232,131,107,.08)",
+                      pointBackgroundColor: ct.accent,
                       pointRadius: 4,
                       tension: 0.3,
                       fill: true,
@@ -216,51 +230,31 @@ export default function ExerciseCard({ exercise, onSaved, onRemove }: Props) {
                   plugins: {
                     legend: { display: false },
                     tooltip: {
-                      backgroundColor: "#1c1c1c",
-                      borderColor: "#333",
+                      backgroundColor: ct.tooltipBg,
+                      borderColor: ct.tooltipBorder,
                       borderWidth: 1,
-                      bodyColor: "#eee",
+                      bodyColor: ct.tooltipText,
                       padding: 8,
                       callbacks: { label: (c) => `${c.parsed.y} lbs` }
                     }
                   },
                   scales: {
-                    x: { ticks: { font: { size: 10 }, color: "#555", autoSkip: true, maxTicksLimit: 6 }, grid: { display: false } },
-                    y: { ticks: { font: { size: 10 }, color: "#555" }, grid: { color: "rgba(255,255,255,0.04)" } }
+                    x: { ticks: { font: { size: 10 }, color: ct.tick, autoSkip: true, maxTicksLimit: 6 }, grid: { display: false } },
+                    y: { ticks: { font: { size: 10 }, color: ct.tick }, grid: { color: ct.grid } }
                   }
                 }}
               />
             </div>
-          )}
+            );
+          })()}
 
-          <div className="flex max-h-40 flex-col gap-1 overflow-y-auto">
-            {entries.length === 0 ? (
+          <div className="flex max-h-64 flex-col overflow-y-auto">
+            {sortedEntries.length === 0 ? (
               <div className="text-xs text-ink-3">No history yet.</div>
             ) : (
-              [...entries]
-                .sort((a, b) => (a.date < b.date ? 1 : -1))
-                .map((e, idx, arr) => {
-                  const prevEntry = arr[idx + 1];
-                  const dw = prevEntry ? e.weight - prevEntry.weight : 0;
-                  const dr = prevEntry ? e.reps - prevEntry.reps : 0;
-                  return (
-                    <div key={e.id} className="flex items-center gap-2 rounded-md2 bg-surface-2 px-2.5 py-1.5">
-                      <div className="w-12 flex-shrink-0 text-[11px] text-ink-3">{e.date.slice(5)}</div>
-                      <div className="flex flex-1 gap-2.5 text-xs tabular-nums">
-                        <span>{e.weight} lbs</span>
-                        <span>{e.reps} reps</span>
-                        <span>{e.sets} sets</span>
-                      </div>
-                      <div
-                        className={`flex-shrink-0 text-[11px] font-semibold ${
-                          dw > 0 || dr > 0 ? "text-accent" : dw < 0 || dr < 0 ? "text-danger" : "text-ink-3"
-                        }`}
-                      >
-                        {!prevEntry ? "first" : dw !== 0 ? `${dw > 0 ? "+" : ""}${dw} lbs` : dr !== 0 ? `${dr > 0 ? "+" : ""}${dr} reps` : "—"}
-                      </div>
-                    </div>
-                  );
-                })
+              sortedEntries.map((e, idx) => (
+                <EntryRow key={e.id} entry={e} prevEntry={sortedEntries[idx + 1]} onUpdated={onSaved} />
+              ))
             )}
           </div>
         </div>

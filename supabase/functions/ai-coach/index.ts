@@ -75,21 +75,24 @@ async function buildWorkoutContext(supabase: ReturnType<typeof createClient>, us
   return ctx;
 }
 
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization"
+};
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, {
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type, Authorization"
-      }
-    });
+    return new Response(null, { headers: CORS_HEADERS });
   }
 
   try {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      return new Response(JSON.stringify({ error: "Missing auth" }), { status: 401 });
+      return new Response(JSON.stringify({ error: "Missing auth" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json", ...CORS_HEADERS }
+      });
     }
 
     // Client scoped to the caller's JWT — used only to verify identity.
@@ -98,7 +101,10 @@ Deno.serve(async (req) => {
     });
     const { data: userData, error: userErr } = await userClient.auth.getUser();
     if (userErr || !userData?.user) {
-      return new Response(JSON.stringify({ error: "Invalid session" }), { status: 401 });
+      return new Response(JSON.stringify({ error: "Invalid session", detail: userErr?.message }), {
+        status: 401,
+        headers: { "Content-Type": "application/json", ...CORS_HEADERS }
+      });
     }
     const userId = userData.user.id;
 
@@ -124,7 +130,7 @@ Deno.serve(async (req) => {
     }));
 
     const geminiRes = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_KEY}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -136,17 +142,28 @@ Deno.serve(async (req) => {
       }
     );
     const geminiData = await geminiRes.json();
+
+    if (geminiData?.error) {
+      // Surface the real reason (e.g. invalid API key, quota, bad model name)
+      // instead of a generic unhelpful fallback — this is the #1 thing worth
+      // seeing in the browser console while debugging setup.
+      return new Response(JSON.stringify({ error: `Gemini API error: ${geminiData.error.message}` }), {
+        status: 502,
+        headers: { "Content-Type": "application/json", ...CORS_HEADERS }
+      });
+    }
+
     const reply =
       geminiData?.candidates?.[0]?.content?.parts?.map((p: any) => p.text || "").join("") ??
       "Sorry, I couldn't generate a response.";
 
     return new Response(JSON.stringify({ reply }), {
-      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
+      headers: { "Content-Type": "application/json", ...CORS_HEADERS }
     });
   } catch (err) {
     return new Response(JSON.stringify({ error: String(err) }), {
       status: 500,
-      headers: { "Access-Control-Allow-Origin": "*" }
+      headers: { "Content-Type": "application/json", ...CORS_HEADERS }
     });
   }
 });

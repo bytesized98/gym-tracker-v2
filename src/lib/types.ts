@@ -53,9 +53,55 @@ export function todayISO(): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
-const PALETTE = ["#22C880", "#F5C842", "#5B8DEF", "#FF5A52", "#B86BFF", "#42D6C4", "#FF8C42"];
+const PALETTE = ["#E8836B", "#8B5A8C", "#5B9AA8", "#D6A24A", "#7C6FA8", "#4F9D7C", "#C76B8B"];
 
 /** Deterministic color per workout, based on its position in the list. */
 export function workoutColor(workoutIndex: number): string {
   return PALETTE[workoutIndex % PALETTE.length];
+}
+
+/** Whether the system is currently in dark mode — used by Chart.js configs,
+ *  since chart colors are plain JS values and can't respond to CSS media queries. */
+export function prefersDark(): boolean {
+  if (typeof window === "undefined" || !window.matchMedia) return false;
+  return window.matchMedia("(prefers-color-scheme: dark)").matches;
+}
+
+/** Chart.js tooltip/grid color set matching the current theme. */
+export function chartTheme() {
+  const dark = prefersDark();
+  return {
+    accent: "#E8836B",
+    tooltipBg: dark ? "#281F33" : "#FFFFFF",
+    tooltipBorder: dark ? "rgba(255,255,255,0.12)" : "rgba(20,10,20,0.14)",
+    tooltipText: dark ? "#F1ECF4" : "#221A26",
+    tick: dark ? "#7C6F84" : "#9C8FA1",
+    grid: dark ? "rgba(255,255,255,0.05)" : "rgba(20,10,20,0.05)"
+  };
+}
+
+// ── PER-DAY EXERCISE SKIP ──────────────────────────────────────────────────────
+// Skipping an exercise for today only hides it from today's session view —
+// it stays in the workout's exercise pool for next time. This is intentionally
+// NOT stored in Supabase since it's a transient per-day display preference,
+// not training data. Resets naturally each day since the key includes the date.
+function skipKey(exerciseId: string, dateIso: string): string {
+  return `lift_log_skip_${exerciseId}_${dateIso}`;
+}
+
+export function isSkippedToday(exerciseId: string, dateIso: string): boolean {
+  try {
+    return localStorage.getItem(skipKey(exerciseId, dateIso)) === "1";
+  } catch {
+    return false;
+  }
+}
+
+export function setSkippedToday(exerciseId: string, dateIso: string, skipped: boolean) {
+  try {
+    if (skipped) localStorage.setItem(skipKey(exerciseId, dateIso), "1");
+    else localStorage.removeItem(skipKey(exerciseId, dateIso));
+  } catch {
+    // localStorage unavailable — skip silently, feature degrades gracefully
+  }
 }
