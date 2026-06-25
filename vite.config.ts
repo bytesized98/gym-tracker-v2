@@ -25,8 +25,8 @@ export default defineConfig({
         theme_color: "#181420",
         background_color: "#181420",
         display: "standalone",
-        start_url: "/lift-log/",
-        scope: "/lift-log/",
+        start_url: "/gym-tracker-v2/",
+        scope: "/gym-tracker-v2/",
         icons: [
           { src: "icon-192.png", sizes: "192x192", type: "image/png" },
           { src: "icon-512.png", sizes: "512x512", type: "image/png", purpose: "any maskable" }
